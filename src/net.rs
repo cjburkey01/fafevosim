@@ -1,8 +1,7 @@
 //! Some neural network code has been borrowed from: https://github.com/jackm321/RustNN
 
 use num_traits::Float as NumFloat;
-use rand::distributions::uniform::SampleUniform;
-use rand::Rng;
+use rand::{distributions::uniform::SampleUniform, Rng};
 use std::ops::{AddAssign, Deref, DerefMut};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]

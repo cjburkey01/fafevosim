@@ -1,0 +1,6 @@
+# Enable whatever because why not.
+unstable_features = true
+
+# Organize impl blocks so type and const come first always.
+reorder_impl_items = true
+imports_granularity = "Crate"

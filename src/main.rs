@@ -1,7 +1,9 @@
 mod net;
 
-use bevy::log::{Level, LogSettings};
-use bevy::prelude::*;
+use bevy::{
+    log::{Level, LogSettings},
+    prelude::*,
+};
 
 fn main() {
     App::new()
