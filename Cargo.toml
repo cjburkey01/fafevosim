@@ -2,5 +2,26 @@
 name = "fafevosim"
 version = "0.1.0"
 edition = "2021"
+license-file = "LICENSE"
 
 [dependencies]
+# Random stuff
+rand = "0.8.5"
+# Error handling just in case
+thiserror = "1.0.37"
+# Generics!
+num-traits = "0.2.15"
+
+# Game engine
+[dependencies.bevy]
+version = "0.8.1"
+default-features = false
+features = [
+    "animation",
+    "bevy_asset",
+    "bevy_scene",
+    "bevy_winit",
+    "render",
+    "png",
+    "x11",
+]
