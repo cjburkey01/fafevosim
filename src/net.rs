@@ -1,18 +1,30 @@
-//! Some neural network code has been borrowed from: https://github.com/jackm321/RustNN
+//! Generic neural network that be used with any kind of float.
+//!
+//! (Most) neural network code has been "borrowed" from: https://github.com/jackm321/RustNN
+//! under the Apache license, available from the repository here:
+//! https://github.com/jackm321/RustNN/blob/c159117494b813f3558f428037d0c45b949b89cf/LICENSE-APACHE
+//! or directly from [apache.org](https://www.apache.org/licenses/LICENSE-2.0.txt).
 
 use num_traits::Float as NumFloat;
 use rand::{distributions::uniform::SampleUniform, Rng};
 use std::ops::{AddAssign, Deref, DerefMut};
 
+/// A generic activation function (so they may be implemented elsewhere).
+pub trait ActivationFunction<Float: NumFloat> {
+    /// Performs the activation function on the given value.
+    fn perform(&self, val: Float) -> Float;
+}
+
+/// Default activation function(s).
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum NNActivation {
     /// The sigmoid activation function.
     Sigmoid,
 }
 
-impl NNActivation {
+impl<Float: NumFloat> ActivationFunction<Float> for NNActivation {
     /// Perform the activation function.
-    pub fn perform<Float: NumFloat>(self, val: Float) -> Float {
+    fn perform(&self, val: Float) -> Float {
         match self {
             Self::Sigmoid => Float::one() / (Float::one() + (-val).exp()),
         }
@@ -20,6 +32,8 @@ impl NNActivation {
 }
 
 /// A single node in a neural network (its weights and bias).
+///
+/// Dereferences to the internal vector of weights.
 #[derive(Debug, Clone)]
 pub struct NNNode<Float: NumFloat>(pub Vec<Float>);
 
@@ -38,6 +52,8 @@ impl<Float: NumFloat> DerefMut for NNNode<Float> {
 }
 
 /// A single layer in a neural network (its nodes).
+///
+/// Dereferences to the internal vector of nodes.
 #[derive(Debug, Clone)]
 pub struct NNLayer<Float: NumFloat>(pub Vec<NNNode<Float>>);
 
@@ -76,7 +92,7 @@ impl<Float: NumFloat + SampleUniform + AddAssign> NN<Float> {
     /// layer size provided will be the number of inputs, the last will be
     /// the number of outputs.
     /// There must be at least two elements in this `layer_sizes` slice.
-    pub fn new(layers_sizes: &[u32]) -> Result<NN<Float>, NNCreateError> {
+    pub fn random(layers_sizes: &[u32]) -> Result<NN<Float>, NNCreateError> {
         // Make sure there is at least an input layer and an output layer
         if layers_sizes.len() < 2 {
             return Err(NNCreateError::Min2Layers);
@@ -122,16 +138,24 @@ impl<Float: NumFloat + SampleUniform + AddAssign> NN<Float> {
     }
 
     /// Runs the neural network and returns the output layer values.
-    /// Returns Result::Err when the input size does not match the number of
+    /// Returns `Result::Err` when the input size does not match the number of
     /// inputs for this neural network.
-    pub fn run(&self, activation: NNActivation, inputs: &[Float]) -> Result<Vec<Float>, ()> {
+    pub fn run<Activation: ActivationFunction<Float>>(
+        &self,
+        activation: Activation,
+        inputs: &[Float],
+    ) -> Result<Vec<Float>, ()> {
         Ok(self.do_run(activation, inputs)?.pop().unwrap())
     }
 
     /// Runs the neural network and returns all layer results.
-    /// Returns Result::Err when the input size does not match the number of
+    /// Returns `Result::Err` when the input size does not match the number of
     /// inputs for this neural network.
-    fn do_run(&self, activation: NNActivation, inputs: &[Float]) -> Result<Vec<Vec<Float>>, ()> {
+    fn do_run<Activation: ActivationFunction<Float>>(
+        &self,
+        activation: Activation,
+        inputs: &[Float],
+    ) -> Result<Vec<Vec<Float>>, ()> {
         // Function to calculate a single node's value from the previous layer
         // values
         fn modified_dotprod<Float: NumFloat + AddAssign>(
@@ -148,10 +172,6 @@ impl<Float: NumFloat + SampleUniform + AddAssign> NN<Float> {
 
         // Size check
         if inputs.len() as u32 == self.num_inputs {
-            // TODO: Rather than pushing all results into this vector, why
-            //       don't we just keep one vector to hold the input's or previous
-            //       layer's values?
-
             // Create results and push inputs to begin processing
             let mut results = Vec::with_capacity(self.layers.len());
             results.push(inputs.to_vec());

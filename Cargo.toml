@@ -7,10 +7,12 @@ license-file = "LICENSE"
 [dependencies]
 # Random stuff
 rand = "0.8.5"
-# Error handling just in case
+# Error handling just in case cause why not, right?
 thiserror = "1.0.37"
-# Generics!
+# Generic neural network!
 num-traits = "0.2.15"
+# States!
+iyes_loopless = "0.8.0"
 
 # Game engine
 [dependencies.bevy]

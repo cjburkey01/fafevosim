@@ -1,9 +1,14 @@
+// Allow component derive for the `NN` type (replace with optional component)
+#![feature(trivial_bounds)]
+
+mod ecs;
 mod net;
 
 use bevy::{
     log::{Level, LogSettings},
     prelude::*,
 };
+use ecs::*;
 
 fn main() {
     App::new()
@@ -18,6 +23,7 @@ fn main() {
             ..default()
         })
         .add_plugins(DefaultPlugins)
+        .add_plugin(NetworkEcsPlugin)
         .add_startup_system(init_scene)
         .run();
 }
