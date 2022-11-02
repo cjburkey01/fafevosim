@@ -1,7 +1,7 @@
 //! Generic neural network that be used with any kind of float.
 //!
 //! (Most) neural network code has been "borrowed" from: https://github.com/jackm321/RustNN
-//! under the Apache license, available from the repository here:
+//! under the Apache license 2.0, which is available from this repository, the repository here:
 //! https://github.com/jackm321/RustNN/blob/c159117494b813f3558f428037d0c45b949b89cf/LICENSE-APACHE
 //! or directly from [apache.org](https://www.apache.org/licenses/LICENSE-2.0.txt).
 
@@ -18,7 +18,7 @@ pub trait ActivationFunction<Float: NumFloat> {
 /// Default activation function(s).
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum NNActivation {
-    /// The sigmoid activation function.
+    /// The sigmoid activation function to get input between 0.0 and 1.0.
     Sigmoid,
 }
 
@@ -71,6 +71,7 @@ impl<Float: NumFloat> DerefMut for NNLayer<Float> {
     }
 }
 
+/// Possible errors returned when attempting to create a neural network.
 #[derive(Debug, thiserror::Error)]
 pub enum NNCreateError {
     #[error("neural network must have at least an input layer and output layer")]
@@ -78,6 +79,13 @@ pub enum NNCreateError {
 
     #[error("each layer of neural network must have at least one node")]
     EmptyLayer,
+}
+
+/// Possible error returned when feeding-forward through the network.
+#[derive(Debug, thiserror::Error)]
+pub enum NNRunError {
+    #[error("wrong number of inputs provided")]
+    InputLenMismatch,
 }
 
 /// A neural network.
@@ -144,7 +152,7 @@ impl<Float: NumFloat + SampleUniform + AddAssign> NN<Float> {
         &self,
         activation: Activation,
         inputs: &[Float],
-    ) -> Result<Vec<Float>, ()> {
+    ) -> Result<Vec<Float>, NNRunError> {
         Ok(self.do_run(activation, inputs)?.pop().unwrap())
     }
 
@@ -155,7 +163,7 @@ impl<Float: NumFloat + SampleUniform + AddAssign> NN<Float> {
         &self,
         activation: Activation,
         inputs: &[Float],
-    ) -> Result<Vec<Vec<Float>>, ()> {
+    ) -> Result<Vec<Vec<Float>>, NNRunError> {
         // Function to calculate a single node's value from the previous layer
         // values
         fn modified_dotprod<Float: NumFloat + AddAssign>(
@@ -173,7 +181,7 @@ impl<Float: NumFloat + SampleUniform + AddAssign> NN<Float> {
         // Size check
         if inputs.len() as u32 == self.num_inputs {
             // Create results and push inputs to begin processing
-            let mut results = Vec::with_capacity(self.layers.len());
+            let mut results = Vec::with_capacity(self.layers.len() + 1);
             results.push(inputs.to_vec());
 
             // Loop through each layer and add it to the results vector.
@@ -187,7 +195,15 @@ impl<Float: NumFloat + SampleUniform + AddAssign> NN<Float> {
             }
             Ok(results)
         } else {
-            Err(())
+            Err(NNRunError::InputLenMismatch)
         }
+    }
+
+    pub fn layers(&self) -> &[NNLayer<Float>] {
+        &self.layers
+    }
+
+    pub fn num_inputs(&self) -> u32 {
+        self.num_inputs
     }
 }
