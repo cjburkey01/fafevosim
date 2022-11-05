@@ -48,8 +48,12 @@ fn main() {
 fn init_scene_system(mut commands: Commands, assets: Res<AssetServer>) {
     // Spawn the camera
     commands.spawn_bundle(Camera2dBundle {
+        transform: Transform::from_xyz(WORLD_SIZE.0 as f32 * 0.5, WORLD_SIZE.1 as f32 * 0.5, 900.0),
         projection: OrthographicProjection {
-            scaling_mode: ScalingMode::FixedVertical(8.0),
+            scaling_mode: ScalingMode::Auto {
+                min_width: WORLD_SIZE.0 as f32,
+                min_height: WORLD_SIZE.1 as f32,
+            },
             ..default()
         },
         ..default()

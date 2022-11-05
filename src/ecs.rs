@@ -106,7 +106,8 @@ fn move_smittys_system(
     // Loop through the Smittys
     for (mut pos, request, traits, mut transform) in query.iter_mut() {
         // Get the new rotation
-        let mut new_rot = pos.1 + request.rot_amt * traits.max_rot_speed * time.delta_seconds();
+        let rot_req = request.rot_amt * 2.0 - 1.0;
+        let mut new_rot = pos.1 + rot_req * traits.max_rot_speed * time.delta_seconds();
         // Wrap between 0 and 1 radian
         let rad = 2.0 * PI;
         if new_rot < 0.0 {
@@ -156,8 +157,6 @@ fn neural_network_update_system(
         // Update the output
         outputs.move_amt = output_results[0];
         outputs.rot_amt = output_results[1];
-
-        debug!("outputs: ( {:?} )", outputs);
     }
 }
 
