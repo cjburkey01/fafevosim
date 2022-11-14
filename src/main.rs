@@ -10,7 +10,7 @@ mod net;
 mod simworld;
 
 // ~~ Imports ~~ //
-use crate::gui::EvoSimGuiPlugin;
+use crate::gui::{EvoSimGuiPlugin, SmittyRaycastSet};
 use bevy::{
     log::{Level, LogPlugin},
     prelude::*,
@@ -56,7 +56,7 @@ fn main() {
 /// Spawn the essentials into the scene.
 fn init_scene_system(mut commands: Commands, assets: Res<AssetServer>) {
     // Spawn the camera
-    commands.spawn(Camera2dBundle {
+    commands.spawn((Camera2dBundle {
         transform: Transform::from_xyz(WORLD_SIZE.0 as f32 * 0.5, WORLD_SIZE.1 as f32 * 0.5, 900.0),
         projection: OrthographicProjection {
             scaling_mode: ScalingMode::Auto {
@@ -66,10 +66,10 @@ fn init_scene_system(mut commands: Commands, assets: Res<AssetServer>) {
             ..default()
         },
         ..default()
-    });
+    },));
 
     // Spawn a sample Smitty
-    commands.spawn(SmittyBundle {
+    commands.spawn((SmittyBundle {
         brain: SimEntityBrain::random(),
         pos: SimEntityPosRot(
             Vec2::new(WORLD_SIZE.0 as f32 / 2.0, WORLD_SIZE.1 as f32 / 2.0),
@@ -93,14 +93,5 @@ fn init_scene_system(mut commands: Commands, assets: Res<AssetServer>) {
             },
             ..default()
         },
-    });
+    },));
 }
-
-/// Resource to keep track of the cursor position.
-#[derive(Resource)]
-pub struct CursorState {
-    cursor_screen_pos: Vec2,
-    cursor_world_pos: Vec2,
-}
-
-fn update_cursor_system(mut cursor_state: ResMut<CursorState>) {}

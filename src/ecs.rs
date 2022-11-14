@@ -1,7 +1,7 @@
 //! The ECS components and systems.
 
 use crate::{net::*, simworld::WORLD_SIZE};
-use bevy::prelude::*;
+use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 use iyes_loopless::prelude::*;
 use std::{f32::consts::PI, time::Duration};
 

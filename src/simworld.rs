@@ -236,7 +236,7 @@ fn tile_sprite_bundle(pos: (usize, usize), texture: Handle<Image>) -> SpriteBund
             custom_size: Some(Vec2::new(1.0, 1.0)),
             ..default()
         },
-        transform: Transform::from_xyz(pos.0 as f32, pos.1 as f32, 0.5)
+        transform: Transform::from_xyz(pos.0 as f32 + 0.05, pos.1 as f32 + 0.05, 0.5)
             .with_scale(Vec3::splat(0.9)),
         texture,
         ..default()
