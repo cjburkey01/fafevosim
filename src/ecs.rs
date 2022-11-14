@@ -1,6 +1,6 @@
 //! The ECS components and systems.
 
-use crate::net::*;
+use crate::{net::*, simworld::WORLD_SIZE};
 use bevy::prelude::*;
 use iyes_loopless::prelude::*;
 use std::{f32::consts::PI, time::Duration};
@@ -121,6 +121,18 @@ fn move_smittys_system(
             * request.move_amt
             * traits.max_move_speed
             * time.delta_seconds();
+        // Wrap the position
+        let (w, h) = (WORLD_SIZE.0 as f32, WORLD_SIZE.1 as f32);
+        if pos.0.x < 0.0 {
+            pos.0.x += w;
+        } else if pos.0.x > w {
+            pos.0.x -= w;
+        }
+        if pos.0.y < 0.0 {
+            pos.0.y += h;
+        } else if pos.0.y > h {
+            pos.0.y -= h;
+        }
         // Update the rotation
         pos.1 = new_rot;
 
@@ -178,7 +190,7 @@ impl Plugin for NetworkEcsPlugin {
                 SystemStage::parallel(),
             )
             .add_stage_after(
-                CoreStage::Update,
+                UpdateStage::UpdateBrains,
                 UpdateStage::UpdateEntities,
                 SystemStage::parallel(),
             )

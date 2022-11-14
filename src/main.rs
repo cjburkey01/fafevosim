@@ -62,7 +62,10 @@ fn init_scene_system(mut commands: Commands, assets: Res<AssetServer>) {
     // Spawn a sample Smitty
     commands.spawn_bundle(SmittyBundle {
         brain: SimEntityBrain::random(),
-        pos: SimEntityPosRot(default(), 0.0),
+        pos: SimEntityPosRot(
+            Vec2::new(WORLD_SIZE.0 as f32 / 2.0, WORLD_SIZE.1 as f32 / 2.0),
+            0.0,
+        ),
         inputs: SimEntityBrainInputs {},
         outputs: SimEntityBrainOutputs {
             move_amt: 1.0,
