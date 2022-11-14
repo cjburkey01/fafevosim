@@ -5,12 +5,14 @@
 
 // my babies
 mod ecs;
+mod gui;
 mod net;
 mod simworld;
 
 // ~~ Imports ~~ //
+use crate::gui::EvoSimGuiPlugin;
 use bevy::{
-    log::{Level, LogSettings},
+    log::{Level, LogPlugin},
     prelude::*,
     render::camera::ScalingMode,
 };
@@ -21,23 +23,30 @@ use simworld::*;
 /// Start le simulation
 fn main() {
     App::new()
-        // Enable debug logging but disable for "loud" crates
-        .insert_resource(LogSettings {
-            level: Level::DEBUG,
-            filter: "wgpu=warn,bevy_ecs=info,naga=info".to_owned(),
-        })
-        // Background color
+        // Background color & antialiasing (can use FXAA with bevy 0.9)
         .insert_resource(ClearColor(Color::BLACK))
-        // Window configuration
-        .insert_resource(WindowDescriptor {
-            title: format!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")),
-            resizable: true,
-            ..default()
-        })
+        .insert_resource(Msaa { samples: 4 })
         // Plugins
-        .add_plugins(DefaultPlugins)
+        .add_plugins(
+            DefaultPlugins
+                // Enable debug logging but disable for "loud" crates
+                .set(LogPlugin {
+                    level: Level::DEBUG,
+                    filter: "wgpu=warn,bevy_ecs=info,naga=info".to_owned(),
+                })
+                // Window configuration
+                .set(WindowPlugin {
+                    window: WindowDescriptor {
+                        title: format!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")),
+                        resizable: true,
+                        ..default()
+                    },
+                    ..default()
+                }),
+        )
         .add_plugin(NetworkEcsPlugin)
         .add_plugin(SimWorldPlugin)
+        .add_plugin(EvoSimGuiPlugin)
         // Spawn the camera and essential scene stuff
         .add_startup_system(init_scene_system)
         // And go!
@@ -47,7 +56,7 @@ fn main() {
 /// Spawn the essentials into the scene.
 fn init_scene_system(mut commands: Commands, assets: Res<AssetServer>) {
     // Spawn the camera
-    commands.spawn_bundle(Camera2dBundle {
+    commands.spawn(Camera2dBundle {
         transform: Transform::from_xyz(WORLD_SIZE.0 as f32 * 0.5, WORLD_SIZE.1 as f32 * 0.5, 900.0),
         projection: OrthographicProjection {
             scaling_mode: ScalingMode::Auto {
@@ -60,7 +69,7 @@ fn init_scene_system(mut commands: Commands, assets: Res<AssetServer>) {
     });
 
     // Spawn a sample Smitty
-    commands.spawn_bundle(SmittyBundle {
+    commands.spawn(SmittyBundle {
         brain: SimEntityBrain::random(),
         pos: SimEntityPosRot(
             Vec2::new(WORLD_SIZE.0 as f32 / 2.0, WORLD_SIZE.1 as f32 / 2.0),
@@ -86,3 +95,12 @@ fn init_scene_system(mut commands: Commands, assets: Res<AssetServer>) {
         },
     });
 }
+
+/// Resource to keep track of the cursor position.
+#[derive(Resource)]
+pub struct CursorState {
+    cursor_screen_pos: Vec2,
+    cursor_world_pos: Vec2,
+}
+
+fn update_cursor_system(mut cursor_state: ResMut<CursorState>) {}

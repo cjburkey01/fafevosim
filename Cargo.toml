@@ -7,18 +7,19 @@ license-file = "LICENSE"
 [dependencies]
 # Random stuff
 rand = "0.8.5"
+noise = "0.8.2"
 # Error handling just in case cause why not, right?
 thiserror = "1.0.37"
 # Generic neural network!
 num-traits = "0.2.15"
 # States!
-iyes_loopless = "0.8.0"
-# Noise!!
-noise = "0.8.2"
+iyes_loopless = { git = "https://github.com/banana-studios/iyes_loopless" }
+# UI
+bevy_egui = "0.17.1"
 
 # Game engine
 [dependencies.bevy]
-version = "0.8.1"
+version = "0.9.0"
 default-features = false
 features = [
     "animation",

@@ -57,6 +57,7 @@ impl SimTile {
 }
 
 /// The resource that contains the evolution simulation tile world.
+#[derive(Resource)]
 pub struct SimWorld {
     tiles: Vec<SimTile>,
     tile_entities: Vec<Entity>,
@@ -150,9 +151,7 @@ fn init_simworld_system(
     let tile_tex = assets.load("tile.png");
 
     // Spawn the world parent object with its bare necessities
-    cmds.spawn()
-        .insert_bundle(TransformBundle::default())
-        .insert_bundle(VisibilityBundle::default())
+    cmds.spawn((TransformBundle::default(), VisibilityBundle::default()))
         .add_children(|cmds| {
             // Add each tile sprite into the world.
             for y in 0..simworld.size.1 {
@@ -160,7 +159,7 @@ fn init_simworld_system(
                     // Spawn the individual tile sprite
                     let i = simworld.index((x, y));
                     simworld.tile_entities[i] = cmds
-                        .spawn_bundle(tile_sprite_bundle((x, y), tile_tex.clone()))
+                        .spawn(tile_sprite_bundle((x, y), tile_tex.clone()))
                         .insert(TileMarker)
                         .id();
                 }
