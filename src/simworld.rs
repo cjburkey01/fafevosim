@@ -1,4 +1,4 @@
-use crate::ecs::UpdateStage;
+use crate::ecs::NeuralUpdateStage;
 use bevy::{prelude::*, sprite::Anchor};
 use noise::{NoiseFn, OpenSimplex};
 
@@ -135,7 +135,7 @@ impl Plugin for SimWorldPlugin {
             .add_startup_system(init_simworld_system)
             .add_startup_system(init_generate_world)
             // Update world stage
-            .add_system_to_stage(UpdateStage::UpdateWorld, update_tile_color);
+            .add_system_to_stage(NeuralUpdateStage::Perform, update_tile_color);
     }
 }
 

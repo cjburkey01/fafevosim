@@ -7,8 +7,9 @@ use std::{f32::consts::PI, time::Duration};
 
 /// Neural network update systems fixed timestep name.
 pub const FT_NEURAL_UPDATE: &str = "fixed_timestep_start_neural_update";
-/// The time between each feed-forward execution through the neural networks.
-pub const NETWORK_UPDATE_PERIOD: Duration = Duration::from_millis(1000);
+/// The number of world tick frames between each feed-forward execution through
+/// the neural networks.
+pub const NETWORK_UPDATE_PERIOD: u32 = 60;
 
 /// The scale of a Smitty.
 pub const SMITTY_SCALE: f32 = 1.0;
@@ -17,15 +18,26 @@ pub const SMITTY_MAX_MOVE_SPEED: f32 = 4.0;
 /// The maximum radians per second a smitty may rotate.
 pub const SMITTY_MAX_ROT_SPEED: f32 = 8.0 * PI; // 4 rot/s
 
-/// The stages within the update stage for the simulation.
+/// The stages within a frame update
 #[derive(Debug, Copy, Clone, StageLabel)]
-pub enum UpdateStage {
-    /// The stage in which neural network updates run.
-    UpdateBrains,
-    /// The stage in which entities move and interact.
+pub enum FrameUpdateStage {
+    /// Update the simulation time resource.
+    UpdateTiming,
+    /// Perform the neural updates if applicable.
+    UpdateNeural,
+    /// Move entities according to their last brain outputs.
     UpdateEntities,
+}
+
+/// The stages within the update stage for the neural network simulation.
+#[derive(Debug, Copy, Clone, StageLabel)]
+pub enum NeuralUpdateStage {
+    /// The stage in which neural network updates run.
+    Collect,
+    /// The stage in which entities move and interact.
+    Update,
     /// The stage in which the world is updated.
-    UpdateWorld,
+    Perform,
 }
 
 /// Component containing 32-bit float neural network for a simulation entity
@@ -177,40 +189,136 @@ fn neural_network_perform_system() {
     debug!("executing network outputs");
 }
 
+/// The state of the simulation (i.e. whether it is running, running for a
+/// single update, etc.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum SimulationState {
+    /// The simulation is not currently running.
+    Stop,
+    /// The simulation is running.
+    Run,
+}
+
+/// The way the simulation behaves.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum SimulationMode {
+    /// The engine will perform one tick and switch the `SimulationState` back
+    /// to `Stop`.
+    Single,
+    /* /// The engine will perform however many ticks are between neural updates
+       /// and switch the `SimulationState` back to `Stop` afterwards.
+    Brain, */
+    /// The simulation will run until the `SimulationState` is changed to
+    /// `Stop`.
+    Auto,
+}
+
+#[derive(Default, Debug, Copy, Clone, Eq, PartialEq, Resource)]
+pub struct SimTime {
+    /// The current world execution frame count.
+    pub world_frame: u32, // Should be good up to 2.2 years of constant running, right?
+    /// The current neural tick count.
+    pub neural_frame: u32,
+    /// The world frame count when the last neural network update was
+    /// performed.
+    pub last_neural_tick_frame: u32,
+    /// Whether this frame is a neural update frame.
+    pub is_neural_tick_frame: bool,
+}
+
+/// System to update the simulation time resource.
+/// When this system is called, the frame is ticked.
+fn update_simulation_time_system(mut sim_time: ResMut<SimTime>) {
+    // Increment the frame and determine how many frames have passed since the
+    // last neural update
+    let frame = sim_time.world_frame + 1;
+    let delta = frame - sim_time.last_neural_tick_frame;
+    sim_time.world_frame = frame;
+
+    // Check if enough frames have passed to perform a neural update
+    sim_time.is_neural_tick_frame = delta >= NETWORK_UPDATE_PERIOD;
+    if sim_time.is_neural_tick_frame {
+        sim_time.neural_frame += 1;
+        sim_time.last_neural_tick_frame = frame;
+    }
+}
+
+/// Simple system to check whether the simulation should run a neural network
+/// update this frame.
+fn is_neural_update_frame_system(sim_time: Res<SimTime>) -> bool {
+    sim_time.is_neural_tick_frame
+}
+
 /// The main plugin, the blood & guts so to speak.
 pub struct NetworkEcsPlugin;
 
 impl Plugin for NetworkEcsPlugin {
     fn build(&self, app: &mut App) {
         app
-            // Add the stages
+            // Add resources
+            .init_resource::<SimTime>()
+            // Add states
+            .add_loopless_state(SimulationState::Stop)
+            .add_loopless_state(SimulationMode::Single)
+            // Add the frame stages
             .add_stage_before(
                 CoreStage::Update,
-                UpdateStage::UpdateBrains,
+                FrameUpdateStage::UpdateTiming,
                 SystemStage::parallel(),
             )
             .add_stage_after(
-                UpdateStage::UpdateBrains,
-                UpdateStage::UpdateEntities,
+                FrameUpdateStage::UpdateTiming,
+                FrameUpdateStage::UpdateNeural,
                 SystemStage::parallel(),
             )
             .add_stage_after(
-                UpdateStage::UpdateEntities,
-                UpdateStage::UpdateWorld,
+                FrameUpdateStage::UpdateNeural,
+                FrameUpdateStage::UpdateEntities,
                 SystemStage::parallel(),
             )
-            // Add the per-frame systems
-            .add_system(move_smittys_system)
-            // Add the neural update fixed timestep systems
-            .add_fixed_timestep_after_stage(
-                UpdateStage::UpdateBrains,
-                NETWORK_UPDATE_PERIOD,
-                FT_NEURAL_UPDATE,
+            // Add the brain stages
+            .add_stage_after(
+                FrameUpdateStage::UpdateNeural,
+                NeuralUpdateStage::Collect,
+                SystemStage::parallel(),
             )
-            .add_fixed_timestep_child_stage(FT_NEURAL_UPDATE)
-            .add_fixed_timestep_child_stage(FT_NEURAL_UPDATE)
-            .add_fixed_timestep_system(FT_NEURAL_UPDATE, 0, neural_network_collect_system)
-            .add_fixed_timestep_system(FT_NEURAL_UPDATE, 1, neural_network_update_system)
-            .add_fixed_timestep_system(FT_NEURAL_UPDATE, 2, neural_network_perform_system);
+            .add_stage_after(
+                NeuralUpdateStage::Collect,
+                NeuralUpdateStage::Update,
+                SystemStage::parallel(),
+            )
+            .add_stage_after(
+                NeuralUpdateStage::Update,
+                NeuralUpdateStage::Perform,
+                SystemStage::parallel(),
+            )
+            // Add the neural update systems
+            .add_system_to_stage(
+                NeuralUpdateStage::Collect,
+                neural_network_collect_system
+                    .run_in_state(SimulationState::Run)
+                    .run_if(is_neural_update_frame_system),
+            )
+            .add_system_to_stage(
+                NeuralUpdateStage::Update,
+                neural_network_update_system
+                    .run_in_state(SimulationState::Run)
+                    .run_if(is_neural_update_frame_system),
+            )
+            .add_system_to_stage(
+                NeuralUpdateStage::Perform,
+                neural_network_perform_system
+                    .run_in_state(SimulationState::Run)
+                    .run_if(is_neural_update_frame_system),
+            )
+            // Add the per-frame systems for when the simulation is running
+            .add_system_set_to_stage(
+                FrameUpdateStage::UpdateEntities,
+                ConditionSet::new()
+                    .run_in_state(SimulationState::Run)
+                    .with_system(move_smittys_system)
+                    .with_system(update_simulation_time_system)
+                    .into(),
+            );
     }
 }

@@ -8,6 +8,7 @@ license-file = "LICENSE"
 # Random stuff
 rand = "0.8.5"
 noise = "0.8.2"
+num-format = "0.4.3"
 # Error handling just in case cause why not, right?
 thiserror = "1.0.37"
 # Generic neural network!
@@ -31,7 +32,7 @@ features = [
     "x11",
 ]
 
-# Enable max optimizations for dependencies, but not for our code:
+# Enable max optimizations for dependencies:
 [profile.dev.package."*"]
 opt-level = 3
 
